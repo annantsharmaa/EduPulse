@@ -1,0 +1,603 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  passwordHash  String
+  role          Role          @default(STUDENT)
+  firstName     String
+  lastName      String
+  phone         String?
+  isActive      Boolean       @default(true)
+  isVerified    Boolean       @default(false)
+  lastLogin     DateTime?
+  profileImage  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  student       Student?
+  faculty       Faculty?
+  parent        Parent?
+  notifications Notification[]
+  auditLogs     AuditLog[]
+  sessions      Session[]
+  tokens        Token[]
+  leaves        Leave[]
+  complaints    Complaint[]
+
+  @@map("users")
+}
+
+model Student {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rollNumber    String   @unique
+  departmentId  String
+  department    Department @relation(fields: [departmentId], references: [id])
+  semester      Int
+  batch         String?
+  admissionYear Int
+  dob           DateTime
+  gender        Gender?
+  bloodGroup    String?
+  address       String?
+  city          String?
+  state         String?
+  pincode       String?
+  guardianName  String?
+  guardianPhone String?
+  guardianEmail String?
+  emergencyContact String?
+  medicalInfo   String?
+  qrCode        String?
+  achievements  String[]
+  disciplinary  String[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  attendance    Attendance[]
+  marks         Mark[]
+  riskScores    RiskScore[]
+  assignments   AssignmentSubmission[]
+  leaves        Leave[]
+  complaints    Complaint[]
+  feePayments   FeePayment[]
+  hostelAllocation HostelAllocation?
+  transportAllocation TransportAllocation?
+  parents       Parent[]
+  counsellings  Counselling[]
+
+  @@map("students")
+}
+
+model Faculty {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  departmentId  String
+  department    Department @relation(fields: [departmentId], references: [id])
+  designation   String
+  qualification String[]
+  experience    Float
+  specialization String[]
+  joiningDate   DateTime
+  salary        Float?
+  researchPapers String[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  subjects      Subject[] @relation("FacultySubjects")
+  leaves        Leave[]
+  complaints    Complaint[]
+  counsellings  Counselling[]
+  timetables    Timetable[]
+
+  @@map("faculty")
+}
+
+model Parent {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id])
+  relation  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("parents")
+}
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  code        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  students    Student[]
+  faculty     Faculty[]
+  subjects    Subject[]
+  courses     Course[]
+
+  @@map("departments")
+}
+
+model Course {
+  id            String   @id @default(cuid())
+  name          String
+  code          String   @unique
+  departmentId  String
+  department    Department @relation(fields: [departmentId], references: [id])
+  duration      Int
+  totalCredits  Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  semesters     Semester[]
+
+  @@map("courses")
+}
+
+model Semester {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id])
+  semesterNo  Int
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  subjects    Subject[]
+
+  @@map("semesters")
+}
+
+model Subject {
+  id            String   @id @default(cuid())
+  name          String
+  code          String   @unique
+  credits       Int
+  type          SubjectType @default(THEORY)
+  departmentId  String
+  department    Department @relation(fields: [departmentId], references: [id])
+  semesterId    String
+  semester      Semester @relation(fields: [semesterId], references: [id])
+  facultyId     String?
+  faculty       Faculty? @relation("FacultySubjects", fields: [facultyId], references: [id])
+  prerequisites String[]
+  maxStudents   Int?
+  roomRequired  String?
+  labRequired   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  attendance    Attendance[]
+  marks         Mark[]
+  timetable     Timetable[]
+  assignments   Assignment[]
+
+  @@map("subjects")
+}
+
+model Timetable {
+  id          String   @id @default(cuid())
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+  dayOfWeek   String
+  startTime   String
+  endTime     String
+  room        String
+  facultyId   String
+  faculty     Faculty  @relation(fields: [facultyId], references: [id])
+  semester    Int
+  batch       String?
+  isLab       Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("timetable")
+}
+
+model Attendance {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+  date        DateTime @default(now())
+  status      AttendanceStatus @default(ABSENT)
+  markedVia   MarkedVia @default(MANUAL)
+  markedBy    String?
+  latitude    Float?
+  longitude   Float?
+  deviceId    String?
+  ipAddress   String?
+  remarks     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([studentId, subjectId, date])
+  @@map("attendance")
+}
+
+model Mark {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+  examType    ExamType
+  marks       Float
+  totalMarks  Float
+  percentage  Float?
+  grade       String?
+  remarks     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("marks")
+}
+
+model Assignment {
+  id          String   @id @default(cuid())
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+  title       String
+  description String?
+  deadline    DateTime
+  maxMarks    Float
+  rubrics     Json?
+  fileUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  submissions AssignmentSubmission[]
+
+  @@map("assignments")
+}
+
+model AssignmentSubmission {
+  id          String   @id @default(cuid())
+  assignmentId String
+  assignment  Assignment @relation(fields: [assignmentId], references: [id])
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  fileUrl     String?
+  content     String?
+  marksObtained Float?
+  feedback    String?
+  submittedAt DateTime @default(now())
+  isLate      Boolean  @default(false)
+  plagiarism  Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("assignment_submissions")
+}
+
+model RiskScore {
+  id                String   @id @default(cuid())
+  studentId         String
+  student           Student  @relation(fields: [studentId], references: [id])
+  attendanceRisk    Float?
+  cgpaForecast      Float?
+  performanceScore  Float?
+  riskLevel         RiskLevel @default(LOW)
+  factors           Json?
+  recommendations   String[]
+  computedAt        DateTime @default(now())
+  createdAt         DateTime @default(now())
+
+  @@map("risk_scores")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  type        NotificationType
+  title       String
+  message     String
+  data        Json?
+  isRead      Boolean  @default(false)
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("notifications")
+}
+
+model FeePayment {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  amount      Float
+  type        FeeType
+  dueDate     DateTime
+  paidDate    DateTime?
+  status      PaymentStatus @default(PENDING)
+  transactionId String?
+  paymentMethod String?
+  invoiceUrl  String?
+  receiptUrl  String?
+  remarks     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("fee_payments")
+}
+
+model Leave {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  studentId   String?
+  student     Student? @relation(fields: [studentId], references: [id])
+  facultyId   String?
+  faculty     Faculty? @relation(fields: [facultyId], references: [id])
+  leaveType   LeaveType
+  startDate   DateTime
+  endDate     DateTime
+  reason      String
+  medicalFile String?
+  status      LeaveStatus @default(PENDING)
+  approvedBy  String?
+  approvedAt  DateTime?
+  remarks     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("leaves")
+}
+
+model Complaint {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  studentId   String?
+  student     Student? @relation(fields: [studentId], references: [id])
+  facultyId   String?
+  faculty     Faculty? @relation(fields: [facultyId], references: [id])
+  category    ComplaintCategory
+  title       String
+  description String
+  priority    Priority @default(MEDIUM)
+  status      ComplaintStatus @default(PENDING)
+  assignedTo  String?
+  resolution  String?
+  resolvedAt  DateTime?
+  files       String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("complaints")
+}
+
+model Counselling {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  facultyId   String
+  faculty     Faculty  @relation(fields: [facultyId], references: [id])
+  date        DateTime
+  topic       String
+  notes       String
+  actionItems String[]
+  followUp    DateTime?
+  status      CounsellingStatus @default(SCHEDULED)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("counsellings")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  action      String
+  entity      String
+  entityId    String?
+  changes     Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  token       String
+  expiresAt   DateTime
+  ipAddress   String?
+  userAgent   String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@map("sessions")
+}
+
+model Token {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  token       String   @unique
+  type        TokenType
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@map("tokens")
+}
+
+model HostelAllocation {
+  id          String   @id @default(cuid())
+  studentId   String   @unique
+  student     Student  @relation(fields: [studentId], references: [id])
+  hostelName  String
+  roomNumber  String
+  checkIn     DateTime
+  checkOut    DateTime?
+  status      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("hostel_allocations")
+}
+
+model TransportAllocation {
+  id          String   @id @default(cuid())
+  studentId   String   @unique
+  student     Student  @relation(fields: [studentId], references: [id])
+  route       String
+  pickupPoint String
+  busNumber   String
+  driverName  String
+  driverPhone String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("transport_allocations")
+}
+
+enum Role {
+  ADMIN
+  FACULTY
+  STUDENT
+  PARENT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum SubjectType {
+  THEORY
+  LAB
+  ELECTIVE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  MEDICAL
+  DUTY
+  HOLIDAY
+  ONLINE
+}
+
+enum MarkedVia {
+  MANUAL
+  QR
+  RFID
+  FACE
+  GPS
+}
+
+enum ExamType {
+  MIDTERM
+  ENDSEM
+  PRACTICAL
+  LAB
+  ASSIGNMENT
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  ALERT
+  SUCCESS
+  EXAM
+  FEE
+  ATTENDANCE
+}
+
+enum FeeType {
+  TUITION
+  HOSTEL
+  TRANSPORT
+  LIBRARY
+  LAB
+  SPORTS
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  REFUNDED
+}
+
+enum LeaveType {
+  CASUAL
+  MEDICAL
+  DUTY
+  EMERGENCY
+  STUDY
+  OTHER
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ComplaintCategory {
+  ACADEMIC
+  ADMINISTRATIVE
+  HOSTEL
+  TRANSPORT
+  OTHER
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ComplaintStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+enum CounsellingStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum TokenType {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
