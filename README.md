@@ -252,8 +252,8 @@ npm start
 B.Tech Computer Science Engineering
 Noida International University
 
-LinkedIn: https://www.linkedin.com/in/annant-sharma-6ab9b8334/
+LinkedIn: https://www.linkedin.com/in/annantsharmaa/
 
-GitHub: [https://github.com/annantsharmaa](https://github.com/annantsharmaa)
+GitHub: https://github.com/annantsharmaa
 
 ---
